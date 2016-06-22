@@ -28,7 +28,7 @@
         }
     ]
   };
-  var since = {{ since }};
+  var since = [ {% for t in since %}"{{ t }}",{% endfor %} ];
   var myLineChart = new Chart(ctx, {
     type: 'line',
     data: data,

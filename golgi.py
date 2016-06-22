@@ -44,7 +44,7 @@ def unix_time_millis(dts):
     parts = dts.split('.')
     dt = datetime.strptime(parts[0], '%Y-%m-%dT%H:%M:%S')
     ms = int((dt - epoch).total_seconds() * 1000.0)
-    us = int(parts[1].replace('.','').replace('Z',''))
+    us = int(parts[1].replace('.','').replace('Z','')[:6])
     return (ms * 1000) + us
 
 @app.route("/")
@@ -55,16 +55,17 @@ def chart():
     for r in result.get_points():
         print r
         data.append(r["value"])
-        since.append(unix_time_millis(r["time"]))
+        since.append(r["time"])
     return render_template('chart.html', data=data, since=since)
 
 @app.route("/latest/<since>")
-def latest():
-    result = db.query('select value from cpu_load_short where time>=' + since)
+def latest(since):
+    print since
+    result = db.query("select value from cpu_load_short where time > '{0}'".format(since))
     data = []
     for r in result.get_points():
         data.append(r["value"])
-    return data
+    return str(data)
 
 if __name__ == "__main__":
     app.run( debug=True)
