@@ -2,6 +2,7 @@ from flask import Flask, render_template
 from influxdb import InfluxDBClient
 from datetime import datetime
 import random
+import time
 
 app = Flask(__name__)
 
@@ -37,14 +38,33 @@ def write():
     db.write_points(json_body)
     return "wrote"
 
+epoch = datetime.utcfromtimestamp(0)
+
+def unix_time_millis(dts):
+    parts = dts.split('.')
+    dt = datetime.strptime(parts[0], '%Y-%m-%dT%H:%M:%S')
+    ms = int((dt - epoch).total_seconds() * 1000.0)
+    us = int(parts[1].replace('.','').replace('Z',''))
+    return (ms * 1000) + us
+
 @app.route("/")
 def chart():
     result = db.query(query)
     data = []
+    since = []
     for r in result.get_points():
         print r
         data.append(r["value"])
-    return render_template('chart.html', data=data)
+        since.append(unix_time_millis(r["time"]))
+    return render_template('chart.html', data=data, since=since)
+
+@app.route("/latest/<since>")
+def latest():
+    result = db.query('select value from cpu_load_short where time>=' + since)
+    data = []
+    for r in result.get_points():
+        data.append(r["value"])
+    return data
 
 if __name__ == "__main__":
     app.run( debug=True)
